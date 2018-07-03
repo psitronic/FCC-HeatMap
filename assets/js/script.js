@@ -5,6 +5,7 @@ const margin = {top: 200, right: 10, bottom: 150, left: 200},
 	buckets = 11;
 const parseYear = d3.timeParse("%Y");
 const parseMonth = d3.timeParse("%m");
+const legenBoxSize = 48;
 
 const getData = new Promise((resolve, reject) => {
 	d3.json(dataUrl, (error, dataset) => {
@@ -28,7 +29,6 @@ const getData = new Promise((resolve, reject) => {
 });
 
 getData.then((data) => {
-	console.log(data);
 
 	const minYear = d3.min(data.dataset, (d) => d.Year);
 	const maxYear = d3.max(data.dataset, (d) => d.Year);
@@ -43,6 +43,11 @@ getData.then((data) => {
 		.attr("height", height + margin.top + margin.bottom)
 		.append("g")
 		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+	var div = d3.select("body").append("div")
+		.attr("class", "tooltip")
+		.attr("id", "tooltip")
+		.style("opacity", 0);
 
 	var xScale = d3.scaleTime()
 		.domain(d3.extent(data.dataset, (d) => d.Year))
@@ -114,25 +119,42 @@ getData.then((data) => {
 		.attr("y", (d) => yScale(d.Month - 1))
 		.attr("width", gridWidth + 1)
 		.attr("height", gridHeight + 6)
-		.style("fill", (d) => colorScale(d.Temperature));
+		.style("fill", (d) => colorScale(d.Temperature))
+		.on("mouseover", function(d) {
+			div.transition()
+			.duration(200)
+			.style("opacity", .9);
+			div
+			.html(d3.timeFormat("%Y")(d.Year) + " - " + d3.timeFormat("%B")(d.Month) + "<br/>" + d.Temperature + "°C" + "<br/>" + d.Variance + "°C")
+        	.attr('data-year', d3.timeFormat("%Y")(d.Year))
+			.style("left", (d3.event.pageX + 23) + "px")
+			.style("top", (d3.event.pageY - 23) + "px");
+			})
+		.on("mouseout", function(d) {
+			div.transition()
+			.duration(500)
+			.style("opacity", 0);
+		});
+		;
 
-  var legend = svg.selectAll(".legend")
-      .data(colorScale.ticks(12))
-    .enter().append("g")
-      .attr("class", "legend")
-      .attr("id", "legend")
-      .attr("transform", (d, i) => "translate(" + (20 + i * 48) + "," + (height + 100) + ")");
+	var legend = svg.selectAll(".legend")
+		.data(colorScale.ticks(12))
+		.enter()
+		.append("g")
+		.attr("class", "legend")
+		.attr("id", "legend")
+		.attr("transform", (d, i) => "translate(" + (20 + i * legenBoxSize) + "," + (height + 85) + ")");
 
-  legend.append("rect")
-      .attr("width", 48)
-      .attr("height", 48)
-      .style("fill", colorScale);
+	legend.append("rect")
+		.attr("width", legenBoxSize)
+		.attr("height", legenBoxSize)
+		.style("fill", colorScale);
 
-  legend.append("text")
-      .attr("x", 26)
-      .attr("y", 10)
-      .attr("dy", ".35em")
-      .text(String);
+	legend.append("text")
+		.attr("x", 26)
+		.attr("y", 58)
+		.attr("dy", ".35em")
+		.text(String);
 
 })
 // .catch((error) => console.log(error));
