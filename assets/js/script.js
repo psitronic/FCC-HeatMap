@@ -1,7 +1,7 @@
 const dataUrl = "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json";
 const margin = {top: 200, right: 10, bottom: 150, left: 200},
 	width = 1900 - margin.left - margin.right,
-	height = 800 - margin.top - margin.bottom
+	height = 750 - margin.top - margin.bottom
 	buckets = 11;
 const parseYear = d3.timeParse("%Y");
 const parseMonth = d3.timeParse("%m");
@@ -18,7 +18,7 @@ const getData = new Promise((resolve, reject) => {
 			let data = dataset.monthlyVariance.map((d) => {
 				return {
 					Year: parseYear(+d.year),
-					Month: parseMonth(+d.month),
+					Month: (+d.month - 1),
 					Temperature: Number.parseFloat(+(d.variance + baseT).toFixed(3)),
 					Variance: +d.variance
 				};
@@ -33,8 +33,8 @@ getData.then((data) => {
 	const minYear = d3.min(data.dataset, (d) => d.Year);
 	const maxYear = d3.max(data.dataset, (d) => d.Year);
 
-	const gridWidth = Math.floor(width / 262);
-	const gridHeight = Math.floor(height / 12);
+	const gridWidth = width / 262;
+	// const gridHeight = Math.floor(height / 12);
 
 
 	var svg = d3.select("#chart")
@@ -53,9 +53,12 @@ getData.then((data) => {
 		.domain(d3.extent(data.dataset, (d) => d.Year))
 		.range([0, width]);
 
-    var yScale = d3.scaleTime()
-        .domain(d3.extent(data.dataset, (d) => d.Month).reverse())
-        .range([height, 0]);
+    var yScale = d3.scaleBand()
+        .domain([0,1,2,3,4,5,6,7,8,9,10,11])
+        .range([0, height]);
+
+        console.log(yScale.bandwidth(),yScale.range(),yScale.domain());
+        console.log(height/12);
 
     var colorScale = d3.scaleLinear()
     	.domain(d3.extent(data.dataset, (d) => d.Temperature))
@@ -63,31 +66,35 @@ getData.then((data) => {
 
 
 	var xAxis = d3.axisBottom(xScale).tickFormat(d3.timeFormat("%Y"));
-	var yAxis = d3.axisLeft(yScale).tickFormat(d3.timeFormat("%B"));
+	var yAxis = d3.axisLeft(yScale).tickValues(yScale.domain()).tickFormat(month => {
+		var date = new Date();
+		
+		return d3.timeFormat("%B")(date.setUTCMonth(month));
+
+});
 
 	svg.append("g")
 		.attr("id", "x-axis")
 		.attr("class", "axis")
-		.attr("transform", "translate("+ gridWidth/2 + ", " + (height + gridHeight + 7) + ")")
+		.attr("transform", "translate(0, " + (height) + ")")
 		.call(xAxis);
 
 	svg.append("g")
 		.attr("id", "y-axis")
 		.attr("class", "axis")
-		.attr("transform", "translate(" + -gridWidth / 2 + ", " + gridHeight / 2 + ")")
 		.call(yAxis);
 
 	svg.append("text")
 		.attr("transform", "rotate(-90)")
 		.attr("x", - height/2)
-		.attr("y", -65)
+		.attr("y", -100)
 		.style("text-anchor", "middle")
 		.text("Months")
 		.attr("class", "axisTitle");
 
 	svg.append("text")
 		.attr("x", (width)/2)
-		.attr("y", height + gridHeight + 50)
+		.attr("y", height + 75)
 		.style("text-anchor", "middle")
 		.text("Years")
 		.attr("class", "axisTitle");
@@ -103,7 +110,7 @@ getData.then((data) => {
 	svg.append("text")
 		.attr("id", "description")
 		.attr("x", (width / 2))
-		.attr("y", 30 - (margin.top / 2))
+		.attr("y", 50 - (margin.top / 2))
 		.attr("text-anchor", "middle")
 		.text(d3.timeFormat("%Y")(minYear) + " - " + d3.timeFormat("%Y")(maxYear) + ": base temperature " + data.Base + "°C")
 		.attr("class", "description");
@@ -112,13 +119,13 @@ getData.then((data) => {
 		.data(data.dataset)
 		.enter().append("rect")
 		.attr("class", "cell")
-		.attr("data-month", (d) => d3.timeFormat("%-m")(d.Month) - 1)
+		.attr("data-month", (d) => d.Month)
 		.attr("data-year", (d) => d3.timeFormat("%Y")(d.Year))
 		.attr("data-temp", (d) => d.Temperature)
-		.attr("x", (d) => xScale(d.Year - 1))
-		.attr("y", (d) => yScale(d.Month - 1))
-		.attr("width", gridWidth + 1)
-		.attr("height", gridHeight + 6)
+		.attr("x", (d) => xScale(d.Year))
+		.attr("y", (d) => yScale(d.Month))
+		.attr("width", gridWidth)
+		.attr("height", (d) => yScale.bandwidth())
 		.style("fill", (d) => colorScale(d.Temperature))
 		.on("mouseover", function(d) {
 			div.transition()
